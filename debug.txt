@@ -1,0 +1,85 @@
+Inicio: 2026-11-07T16:52:10.798175+00:00
+--- Fase 1: API oficial search.acestream.net ---
+Buscando: movistar
+    HTTP 200 | '{"total":7,"time":"0.0742","groupped":false,"results":[{"infohash":"318c12f5f40d7bd9c0ab0c130bf9b96668098279","name":"Movistar+","categories":["amateu'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: dazn
+    HTTP 200 | '{"total":13,"time":"0.0764","groupped":false,"results":[{"infohash":"0560234787945a17522e284c4c22bb4df29f33b0","name":"DAZN1","categories":["sport"],"'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: champions
+    HTTP 200 | '{"total":0,"time":"0.0515","groupped":false,"results":[]}'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: laliga
+    HTTP 200 | '{"total":8,"time":"0.0713","groupped":false,"results":[{"infohash":"c1959a27edb0b94c5005a2dea93b7a70d4312f1c","name":"M. LaLiga","categories":["sport"'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: tennis
+    HTTP 200 | '{"total":1,"time":"0.0478","groupped":false,"results":[{"infohash":"1b348443efc7f0cf4cdf349ac35bbe5d41be6220","name":"Tennis Channel HD","categories":'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: tenis
+    HTTP 200 | '{"total":0,"time":"0.0497","groupped":false,"results":[]}'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: nba
+    HTTP 200 | '{"total":1,"time":"0.0745","groupped":false,"results":[{"infohash":"42832fbf9a1d3bdcca043e09951d6769fbbe04e7","name":"NBA TV [US]","categories":["spor'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: m+
+    HTTP 200 | '{"total":12,"time":"0.0743","groupped":false,"results":[{"infohash":"acc20f3739d9eccd0539f0c62519f35b8750a245","name":"M+ DRAMA HD Spain","categories"'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: sport tv
+    HTTP 200 | '{"total":3,"time":"0.0707","groupped":false,"results":[{"infohash":"8356abd054c23015cfc1b1f187f8a7e30940b3f5","name":"TVP Sport HD [PL]","categories":'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: eurosport
+    HTTP 200 | '{"total":8,"time":"0.0508","groupped":false,"results":[{"infohash":"42e959bffd0dd0f138dd03abf387b4284ece7e30","name":"Eurosport 1 HD [RU]","categories'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: sky sports
+    HTTP 200 | '{"total":4,"time":"0.0976","groupped":false,"results":[{"infohash":"78266c15035d0ad8cbc58f821733931e1de434ab","name":"Sky Sports Main Event [UK]","cat'
+    Canales extraidos: 0 | nuevos: 0
+Buscando: formula 1
+    HTTP 200 | '{"total":0,"time":"0.0511","groupped":false,"results":[]}'
+    Canales extraidos: 0 | nuevos: 0
+
+Canales tras la API: 0
+
+--- Fase 2: web asesearch (Playwright) ---
+Buscando en web: movistar
+    JSON: https://asesearch.vercel.app/api/search?query=movistar
+    Encontrados: 7 | nuevos: 7
+Buscando en web: dazn
+    JSON: https://asesearch.vercel.app/api/search?query=dazn
+    Encontrados: 12 | nuevos: 12
+Buscando en web: champions
+    JSON: https://asesearch.vercel.app/api/search?query=champions
+    Encontrados: 0 | nuevos: 0
+Buscando en web: laliga
+    JSON: https://asesearch.vercel.app/api/search?query=laliga
+    Encontrados: 8 | nuevos: 5
+Buscando en web: tennis
+    JSON: https://asesearch.vercel.app/api/search?query=tennis
+    Encontrados: 1 | nuevos: 1
+Buscando en web: tenis
+    JSON: https://asesearch.vercel.app/api/search?query=tenis
+    Encontrados: 0 | nuevos: 0
+Buscando en web: nba
+    JSON: https://asesearch.vercel.app/api/search?query=nba
+    Encontrados: 1 | nuevos: 1
+Buscando en web: m+
+    JSON: https://asesearch.vercel.app/api/search?query=m%2B
+    Encontrados: 13 | nuevos: 13
+Buscando en web: sport tv
+    JSON: https://asesearch.vercel.app/api/search?query=sport+tv
+    Encontrados: 3 | nuevos: 3
+Buscando en web: eurosport
+    JSON: https://asesearch.vercel.app/api/search?query=eurosport
+    Encontrados: 8 | nuevos: 8
+Buscando en web: sky sports
+    JSON: https://asesearch.vercel.app/api/search?query=sky+sports
+    Encontrados: 4 | nuevos: 4
+Buscando en web: formula 1
+    JSON: https://asesearch.vercel.app/api/search?query=formula+1
+    Encontrados: 0 | nuevos: 0
+Canales tras la web: 54
+
+====================================
+LISTA M3U GENERADA CORRECTAMENTE
+Canales unicos: 54
+Archivo: lista.m3u
+====================================
