@@ -18,14 +18,18 @@ acestream://d0a5eb107ed5d70f542e7483e2d0f9068b15f6c4
 acestream://cda3779a08946c6a1e8e07be2cbccde83d32b731
 #EXTINF:-1 group-title="DAZN",DAZN 2 Bar HD [DE]
 acestream://7d64b566d7f3a8e892a1a8cafc9521b9cddd5df6
+#EXTINF:-1 group-title="DAZN",DAZN F1 1080 elcano.top zeronet http://127.0.0.1:43110/18D6dPcsjLrjg2hhnYqKzNh2W6QtXrDwF/ https://ipfs.io/ipns/elcano.top
+acestream://47eda3cf9ac4b6c4af169315bba9629246afa022
 #EXTINF:-1 group-title="DAZN",DAZN F1 HD
 acestream://6d325cda6ed591647ef5e91edd043147bce8be30
 #EXTINF:-1 group-title="DAZN",DAZN F1 Shickat | shickat.online (VPN) | shickat.blog | https://ipfs.io/ipns/k51qzi5uqu5dgni30z98zbli9a3vv2xtp8cek1xjikfsels3a259i5clyta19p
 acestream://4a8fc1863b97e215bc52613d4336fc8929040041
-#EXTINF:-1 group-title="DAZN",DAZN LaLiga 1080 elcano.top zeronet http://127.0.0.1:43110/18D6dPcsjLrjg2hhnYqKzNh2W6QtXrDwF/ https://ipfs.io/ipns/elcano.top
-acestream://9184e7ef806ff697de0547354049931f46046145
+#EXTINF:-1 group-title="DAZN",DAZN LaLiga
+acestream://8a25653a2f774f4ae1062d38a30dcd714d304a3a
 #EXTINF:-1 group-title="DAZN",DAZN LaLiga Shickat | shickat.online (VPN) | shickat.blog | https://ipfs.io/ipns/k51qzi5uqu5dgni30z98zbli9a3vv2xtp8cek1xjikfsels3a259i5clyta19p
 acestream://5437f76710c6cf7769e4a101ee52a6f4d4b39745
+#EXTINF:-1 group-title="DAZN",Dazn MotoGP 1080 elcano.top zeronet http://127.0.0.1:43110/18D6dPcsjLrjg2hhnYqKzNh2W6QtXrDwF/ https://ipfs.io/ipns/elcano.top
+acestream://aa268bdcd9a25e28372f938f39afd972726f94df
 #EXTINF:-1 group-title="DAZN",DAZN MotoGP Shickat | shickat.online (VPN) | shickat.blog | https://ipfs.io/ipns/k51qzi5uqu5dgni30z98zbli9a3vv2xtp8cek1xjikfsels3a259i5clyta19p
 acestream://0d4b3b5f63c6afd180d9e5e2e57528e15a5218ab
 #EXTINF:-1 group-title="DAZN",DAZN1
@@ -55,6 +59,10 @@ acestream://3fee4ce1dbc079ff3f302535070d9547988a407c
 #EXTINF:-1 group-title="EUROSPORT",Eurosport [PL]
 acestream://d74bdd567469ed170b670db8b8947061e964fb84
 
+#EXTGRP: group-title="FORMULA 1"
+#EXTINF:-1 group-title="FORMULA 1",Sky Sport F1 [DE]
+acestream://b0999d6facfbae2944b9c7bba442eeea9cd9d4b2
+
 #EXTGRP: group-title="FUTBOL INT"
 #EXTINF:-1 group-title="FUTBOL INT",Jordan Sport TV
 acestream://2140fdb5c8d356dc3cd282eec7aeeae82340013f
@@ -66,6 +74,16 @@ acestream://8356abd054c23015cfc1b1f187f8a7e30940b3f5
 #EXTGRP: group-title="LIGA DE CAMPEONES"
 #EXTINF:-1 group-title="LIGA DE CAMPEONES",M+ LIGA DE CAMPEONES FHD (1 opcion) --> NEW ERA
 acestream://deab41fff6f3ccbfa61b812b9bb108f3957d6e26
+#EXTINF:-1 group-title="LIGA DE CAMPEONES",M. Liga de Campeones
+acestream://8c1c3eae077f3a786ed2f0a426197ea93fdf7373
+#EXTINF:-1 group-title="LIGA DE CAMPEONES",M. Liga de Campeones
+acestream://dfa66881b9613a77bd5479f6eedc5542504c3ef7
+#EXTINF:-1 group-title="LIGA DE CAMPEONES",M. Liga de Campeones 2
+acestream://cc3d749cfd30877b418f1d59a80d9291e0f091c8
+#EXTINF:-1 group-title="LIGA DE CAMPEONES",M. Liga de Campeones 3
+acestream://8cc8e3c092fa238bc0cbc65382ae436131fc3eab
+#EXTINF:-1 group-title="LIGA DE CAMPEONES",M. Liga de Campeones 4
+acestream://2550ea6d32d3384dcc8ac149c711bceb70d4b005
 
 #EXTGRP: group-title="MOVISTAR"
 #EXTINF:-1 group-title="MOVISTAR",LaLiga Hypermotion Shickat | shickat.online (VPN) | shickat.blog | https://ipfs.io/ipns/k51qzi5uqu5dgni30z98zbli9a3vv2xtp8cek1xjikfsels3a259i5clyta19p
