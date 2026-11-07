@@ -34,6 +34,8 @@ SEARCH_QUERIES = [
     "movistar",
     "dazn",
     "champions",
+    "champions league",
+    "liga de campeones",
     "laliga",
     "tennis",
     "tenis",
@@ -43,6 +45,7 @@ SEARCH_QUERIES = [
     "eurosport",
     "sky sports",
     "formula 1",
+    "f1",
 ]
 
 PAGE_SIZE = 200
@@ -224,7 +227,11 @@ def search_api(query, page=0):
     if data.get("error"):
         raise RuntimeError(str(data["error"]))
 
-    result = data.get("result") or {}
+    result = data.get("result")
+    if not isinstance(result, dict):
+        # La API real responde sin el envoltorio "result":
+        # {"total": 7, "results": [...]}
+        result = data
     if not isinstance(result, dict):
         return [], 0
 
