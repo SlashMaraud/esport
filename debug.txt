@@ -1,14 +1,14 @@
-Inicio: 2026-11-07T17:59:54.868035+00:00
+Inicio: 2026-11-07T18:32:09.053718+00:00
 Motor de reproduccion: http://127.0.0.1:6878
 --- Fase 1: playlist de search-ace.stream ---
-    HTTP 200 | 262903 bytes | application/x-mpegURL
+    HTTP 200 | 262614 bytes | application/x-mpegURL
     > #EXTM3U
     > #EXTINF:-1,.black [RU]
     > http://127.0.0.1:6878/ace/getstream?infohash=18cf2d3491233fa980add6db246847a5077be047&pid=1
     > #EXTINF:-1,.red [RU]
     > http://127.0.0.1:6878/ace/getstream?infohash=cd680104166a605ed27730dcaec73bf81221d540&pid=2
     > #EXTINF:-1,.sci-fi [RU]
-    Canales en la playlist: 2122 | guardados: 59 | descartados (no son de tus grupos): 2063
+    Canales en la playlist: 2119 | guardados: 59 | descartados (no son de tus grupos): 2060
 
 Canales tras la playlist: 59
 
