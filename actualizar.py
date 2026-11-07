@@ -1,7 +1,6 @@
 import re
-import requests
+from playwright.sync_api import sync_playwright
 
-# Términos ampliados que queremos buscar en la web
 SEARCH_TERMS = ["movistar", "dazn", "campeones", "laliga", "m+", "tennis", "tenis", "nba"]
 BASE_URL = "https://asesearch.vercel.app/"
 
@@ -19,52 +18,52 @@ def generate_m3u():
     m3u_entries = [HEADER_M3U]
     seen_hashes = set()
 
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    for term in SEARCH_TERMS:
-        try:
-            url = f"{BASE_URL}?q={term}"
-            response = requests.get(url, headers=headers)
-            
-            if response.status_code != 200:
-                continue
+        for term in SEARCH_TERMS:
+            try:
+                url = f"{BASE_URL}?q={term}"
+                page.goto(url, timeout=30000)
+                # Esperamos 3 segundos a que el navegador cargue los resultados de la búsqueda
+                page.wait_for_timeout(3000)
+                
+                html_content = page.content()
+                
+                pattern = re.compile(r'([^<>"\n]*?(?:movistar|m\+|dazn|campeones|laliga|tennis|tenis|nba)[^<>"\n]*?)["\'].*?acestream://([a-fA-F0-9]{40})', re.IGNORECASE)
+                matches = pattern.findall(html_content)
 
-            html_content = response.text
-            
-            # Patrón ampliado para capturar nombres y hashes
-            pattern = re.compile(r'([^<>"\n]*?(?:movistar|m\+|dazn|campeones|laliga|tennis|tenis|nba)[^<>"\n]*?)["\'].*?acestream://([a-fA-F0-9]{40})', re.IGNORECASE)
-            matches = pattern.findall(html_content)
+                for raw_name, hash_id in matches:
+                    if hash_id in seen_hashes:
+                        continue
+                    seen_hashes.add(hash_id)
 
-            for raw_name, hash_id in matches:
-                if hash_id in seen_hashes:
-                    continue
-                seen_hashes.add(hash_id)
+                    clean_name = raw_name.strip()
+                    name_lower = clean_name.lower()
 
-                clean_name = raw_name.strip()
-                name_lower = clean_name.lower()
+                    if "dazn" in name_lower:
+                        group = "DAZN"
+                    elif "campeones" in name_lower or "champions" in name_lower:
+                        group = "LIGA DE CAMPEONES"
+                    elif "tennis" in name_lower or "tenis" in name_lower:
+                        group = "TENIS"
+                    elif "nba" in name_lower or "basketball" in name_lower or "baloncesto" in name_lower:
+                        group = "NBA"
+                    else:
+                        group = "MOVISTAR"
 
-                # Clasificación automática en su grupo correspondiente
-                if "dazn" in name_lower:
-                    group = "DAZN"
-                elif "campeones" in name_lower or "champions" in name_lower:
-                    group = "LIGA DE CAMPEONES"
-                elif "tennis" in name_lower or "tenis" in name_lower:
-                    group = "TENIS"
-                elif "nba" in name_lower or "basketball" in name_lower or "baloncesto" in name_lower:
-                    group = "NBA"
-                else:
-                    group = "MOVISTAR"
+                    entry = f'#EXTINF:-1 group-title="{group}", {clean_name}\nacestream://{hash_id}\n'
+                    m3u_entries.append(entry)
+            except Exception as e:
+                print(f"Error con {term}: {e}")
 
-                entry = f'#EXTINF:-1 group-title="{group}", {clean_name}\nacestream://{hash_id}\n'
-                m3u_entries.append(entry)
-        except Exception as e:
-            print(f"Error buscando {term}: {e}")
+        browser.close()
 
-    # Guardar el archivo actualizado
     with open("lista.m3u", "w", encoding="utf-8") as f:
         f.write("\n".join(m3u_entries))
     
-    print("¡Lista generada con nuevos deportes!")
+    print("¡Lista generada con éxito mediante navegador virtual!")
 
 if __name__ == "__main__":
     generate_m3u()
