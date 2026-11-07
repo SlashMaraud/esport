@@ -2,7 +2,8 @@ import re
 from playwright.sync_api import sync_playwright
 
 BASE_URL = "https://asesearch.vercel.app/"
-SEARCH_TERMS = ["movistar", "dazn", "campeones", "laliga", "m+", "tennis", "tenis", "nba", "basket", "deportes"]
+# Términos específicos para buscar en la plataforma
+SEARCH_QUERIES = ["movistar", "dazn", "campeones", "laliga", "tennis", "tenis", "nba", "m+"]
 
 HEADER_M3U = """#EXTM3U url-tvg="https://raw.githubusercontent.com/davidmuma/EPG_dobleM/refs/heads/master/guiatv.xml,https://epgshare01.online/epgshare01/epg_ripper_NL1.xml.gz,https://raw.githubusercontent.com/davidmuma/EPG_dobleM/master/guiatv.xml" refresh="3600"
 #EXTVLCOPT:network-caching=1000
@@ -21,38 +22,26 @@ def generate_m3u():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(BASE_URL, timeout=60000)
-        page.wait_for_load_state("networkidle")
 
-        for term in SEARCH_TERMS:
+        for query in SEARCH_QUERIES:
             try:
-                # Localizar la barra de búsqueda y escribir el término
-                search_input = page.locator("input[type='text'], input").first
-                search_input.click()
-                search_input.fill("")
-                search_input.fill(term)
-                
-                # Hacer clic en el botón de búsqueda
-                search_btn = page.locator("button").filter(has_text=re.compile("Search", re.IGNORECASE)).first
-                if search_btn.count() > 0:
-                    search_btn.click()
-                else:
-                    search_input.press("Enter")
-
-                # Esperar a que la página renderice los resultados
-                page.wait_for_timeout(4000)
+                # Navegamos directamente probando la ruta de búsqueda
+                target_url = f"{BASE_URL}?search={query}"
+                page.goto(target_url, timeout=30000)
+                page.wait_for_timeout(4000) # Esperar a que renderice el contenido dinámico
                 
                 html_content = page.content()
                 
-                # Buscar hashes de AceStream y nombres asociados
-                pattern = re.compile(r'([^<>"\n]{3,80})["\'].*?acestream://([a-fA-F0-9]{40})', re.IGNORECASE)
+                # Extraer todos los hashes de acestream junto al texto circundante
+                pattern = re.compile(r'([^<>"\n]{3,90})["\'][^>]*?acestream://([a-fA-F0-9]{40})', re.IGNORECASE)
                 matches = pattern.findall(html_content)
 
-                hash_pattern = re.compile(r'acestream://([a-fA-F0-9]{40})', re.IGNORECASE)
-                all_hashes = hash_pattern.findall(html_content)
-                
-                for h in all_hashes:
-                    matches.append((f"Canal {term.capitalize()}", h))
+                # Búsqueda de respaldo por si el formato cambia
+                if not matches:
+                    simple_pattern = re.compile(r'acestream://([a-fA-F0-9]{40})', re.IGNORECASE)
+                    hashes_only = simple_pattern.findall(html_content)
+                    for h in hashes_only:
+                        matches.append((f"Canal {query.capitalize()}", h))
 
                 for raw_name, hash_id in matches:
                     if hash_id in seen_hashes:
@@ -60,13 +49,13 @@ def generate_m3u():
                     seen_hashes.add(hash_id)
 
                     clean_name = raw_name.strip()
-                    clean_name = re.sub(r'[\n\t]', ' ', clean_name).strip()
+                    clean_name = re.sub(r'[\n\t\r]', ' ', clean_name).strip()
                     if not clean_name or len(clean_name) > 60 or "search" in clean_name.lower():
-                        clean_name = f"Canal {term.capitalize()}"
+                        clean_name = f"Canal {query.capitalize()}"
 
                     name_lower = clean_name.lower()
 
-                    # Clasificar en su grupo correspondiente
+                    # Asignación de grupos limpia y ordenada
                     if "dazn" in name_lower:
                         group = "DAZN"
                     elif "campeones" in name_lower or "champions" in name_lower:
@@ -82,14 +71,14 @@ def generate_m3u():
                     m3u_entries.append(entry)
 
             except Exception as e:
-                print(f"Error buscando {term}: {e}")
+                print(f"Error procesando {query}: {e}")
 
         browser.close()
 
     with open("lista.m3u", "w", encoding="utf-8") as f:
         f.write("\n".join(m3u_entries))
     
-    print(f"¡Lista generada con {len(seen_hashes)} canales!")
+    print(f"¡Lista generada con éxito! Total canales únicos: {len(seen_hashes)}")
 
 if __name__ == "__main__":
     generate_m3u()
