@@ -8,6 +8,7 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: write
     steps:
@@ -19,17 +20,20 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Instalar dependencias y navegador virtual
-        run: |
-          pip install requests playwright
-          playwright install --with-deps chromium
+      - name: Instalar requests y Playwright
+        run: pip install requests playwright
 
-      - name: Ejecutar script de extracción
+      - name: Instalar navegador virtual
+        continue-on-error: true
+        run: playwright install --with-deps chromium
+
+      - name: Ejecutar script de extraccion
         run: python actualizar.py
 
-      - name: Guardar la lista actualizada automáticamente
+      - name: Guardar resultados
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add lista.m3u
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-actualización de lista.m3u" && git push)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add lista.m3u debug.txt
+          if [ -f debug.png ]; then git add debug.png; fi
+          git diff --staged --quiet || (git commit -m "Auto-actualizacion de lista.m3u" && git push)
