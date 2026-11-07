@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """
-Genera lista.m3u con canales AceStream deportivos.
+Genera lista.m3u SOLO con: Movistar, M+, DAZN (y sus variantes), tennis y NBA.
 
 Estrategia:
   1) API oficial search.acestream.net (rapida).
-  2) Si no devuelve nada (por ejemplo, bloqueo de IP en GitHub Actions),
-     abre https://asesearch.vercel.app/ con Playwright (Chromium headless),
-     busca cada termino y captura los resultados.
+  2) Si no devuelve nada (p. ej. bloqueo de IP en GitHub Actions),
+     abre https://asesearch.vercel.app/ con Playwright y busca ahi.
 
-Siempre escribe debug.txt (y debug.png si usa la web) para poder ver
-desde el movil que ha pasado, sin abrir los logs de Actions.
+IMPORTANTE sobre los enlaces:
+  La API devuelve el "infohash" del canal, que NO es lo mismo que el
+  "content id". Un enlace acestream://INFOHASH no abre. Por eso, para
+  los infohash se genera:
+      http://127.0.0.1:6878/ace/getstream?infohash=HASH
+  (hace falta el engine de Ace Stream en marcha en ese equipo).
+  Si tu engine esta en otra IP, cambia ENGINE_URL.
+
+Escribe debug.txt (y debug.png si usa la web) para ver que paso.
 """
 
 import re
@@ -26,26 +32,67 @@ API_URL = "https://search.acestream.net/"
 API_KEY = "test_api_key"
 API_VERSION = 1
 
+# Engine de Ace Stream que reproducira los enlaces.
+#   Movil con Ace Serve / engine local : "http://127.0.0.1:6878"
+#   Engine en casa (ejemplo)           : "http://192.168.1.128:6878"
+#   Vacio ("")                         : usa enlaces acestream://
+ENGINE_URL = "http://127.0.0.1:6878"
+
 WEB_URL = "https://asesearch.vercel.app/"
-USE_WEB_FALLBACK = True   # si la API no da nada, usar la web con Playwright
+USE_WEB_FALLBACK = True   # si la API no da nada, usar la web (Playwright)
 FORCE_WEB = False         # True = usar SIEMPRE la web ademas de la API
 
+# True = solo guarda canales que encajen en GROUP_RULES
+ONLY_MATCHING = True
+
+# Grupos: (nombre, regex sobre el nombre en minusculas). Gana el primero.
+GROUP_RULES = [
+    ("DAZN", r"\bdazn"),
+    ("MOVISTAR", r"movistar|\bm\+|^m\.\s|^#?\s?vamos\b"),
+    ("NBA", r"\bnba\b"),
+    ("TENIS", r"\b(tennis|tenis)\b"),
+]
+
 SEARCH_QUERIES = [
+    # Movistar
     "movistar",
-    "dazn",
-    "champions",
-    "champions league",
-    "liga de campeones",
+    "movistar plus",
+    "movistar liga",
+    "movistar liga de campeones",
+    "movistar deportes",
+    "vamos",
+    # M+
+    "m+",
+    "m+ 1",
+    "m+ liga",
+    "m+ laliga",
+    "m+ liga de campeones",
+    "m+ deportes",
+    "m. laliga",
+    "m. liga de campeones",
     "laliga",
+    "liga de campeones",
+    "champions",
+    # DAZN
+    "dazn",
+    "dazn 1",
+    "dazn 2",
+    "dazn 3",
+    "dazn 4",
+    "dazn laliga",
+    "dazn f1",
+    "dazn motogp",
+    "dazn moto gp",
+    # Tenis y NBA
     "tennis",
     "tenis",
     "nba",
-    "m+",
-    "sport tv",
-    "eurosport",
-    "sky sports",
-    "formula 1",
-    "f1",
+]
+
+# Busquedas que usa la fase web (mas lenta, solo si la API falla)
+WEB_QUERIES = [
+    "movistar", "m+", "laliga", "liga de campeones",
+    "dazn", "tennis", "nba",
 ]
 
 PAGE_SIZE = 200
@@ -53,10 +100,6 @@ MAX_PAGES = 10
 OUTPUT_FILE = "lista.m3u"
 DEBUG_FILE = "debug.txt"
 SCREENSHOT_FILE = "debug.png"
-
-# Formato de los enlaces. Alternativa con Engine local:
-# http://127.0.0.1:6878/ace/getstream?id={hash}
-STREAM_TEMPLATE = "acestream://{hash}"
 
 UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -68,13 +111,8 @@ HEADER_M3U = """#EXTM3U url-tvg="https://raw.githubusercontent.com/davidmuma/EPG
 
 #EXTGRP: group-title="MOVISTAR" group-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Movistar_logo_2020.svg/512px-Movistar_logo_2020.svg.png"
 #EXTGRP: group-title="DAZN" group-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Dazn-logo.png/601px-Dazn-logo.png"
-#EXTGRP: group-title="LIGA DE CAMPEONES" group-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/UEFA_Champions_League_logo_2021.svg/512px-UEFA_Champions_League_logo_2021.svg.png"
 #EXTGRP: group-title="TENIS" group-logo="https://www.soyvisual.org/sites/default/files/styles/twitter_card/public/images/photos/dep_0002.jpg"
 #EXTGRP: group-title="NBA" group-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Basketball.png/480px-Basketball.png"
-#EXTGRP: group-title="EUROSPORT"
-#EXTGRP: group-title="SKY SPORTS"
-#EXTGRP: group-title="FORMULA 1"
-#EXTGRP: group-title="FUTBOL INT"
 """
 
 # ============================================================
@@ -106,7 +144,7 @@ ACE_RE = re.compile(r"acestream://([a-fA-F0-9]{40})")
 
 
 def valid_hash(hash_id):
-    """AceStream usa hashes de 40 caracteres hexadecimales."""
+    """Los hashes de AceStream son 40 caracteres hexadecimales."""
     return bool(re.fullmatch(r"[a-f0-9]{40}", str(hash_id).strip().lower()))
 
 
@@ -119,49 +157,71 @@ def clean_name(name):
 
 
 def classify_channel(name):
+    """Devuelve el grupo del canal, o None si no nos interesa."""
     n = name.lower()
+    for group, pattern in GROUP_RULES:
+        if re.search(pattern, n):
+            return group
+    return None
 
-    if "dazn" in n:
-        return "DAZN"
-    if "champions" in n or "campeones" in n:
-        return "LIGA DE CAMPEONES"
-    if "eurosport" in n:
-        return "EUROSPORT"
-    if "sky sports" in n:
-        return "SKY SPORTS"
-    if "formula 1" in n or "f1" in n:
-        return "FORMULA 1"
-    if "tennis" in n or "tenis" in n:
-        return "TENIS"
-    if "nba" in n or "basket" in n:
-        return "NBA"
-    if any(x in n for x in ["movistar", "m+", "vamos", "liga"]):
-        return "MOVISTAR"
-    return "FUTBOL INT"
+
+def natural_key(text):
+    """Orden natural: DAZN 2 antes que DAZN 10."""
+    return [
+        int(part) if part.isdigit() else part
+        for part in re.split(r"(\d+)", text.lower())
+    ]
+
+
+def stream_url(hash_id, kind):
+    """
+    kind = "infohash"    -> hash de torrent (lo que da la API de busqueda)
+    kind = "content_id"  -> ID de contenido (el de acestream://)
+    """
+    if ENGINE_URL:
+        param = "infohash" if kind == "infohash" else "id"
+        return f"{ENGINE_URL.rstrip('/')}/ace/getstream?{param}={hash_id}"
+
+    if kind == "infohash":
+        return f"acestream://?infohash={hash_id}"
+    return f"acestream://{hash_id}"
 
 
 def walk_json(obj, out, parent_name=None):
     """
-    Recorre cualquier JSON (API o web) y recoge {name, hash}.
-    Soporta resultados planos, agrupados ("items") y enlaces acestream://.
+    Recorre cualquier JSON (API o web) y recoge canales:
+    {name, hash, kind, availability}. Si hay content_id lo prefiere
+    sobre el infohash.
     """
     if isinstance(obj, dict):
-        raw_name = (
-            obj.get("name") or obj.get("title") or obj.get("channel")
-        )
+        raw_name = obj.get("name") or obj.get("title") or obj.get("channel")
         name = raw_name if isinstance(raw_name, str) and raw_name else parent_name
 
-        for key in (
-            "infohash", "content_id", "contentId", "hash",
-            "id", "ace_id", "acestream_id",
+        found = None
+        for key, kind in (
+            ("content_id", "content_id"),
+            ("contentId", "content_id"),
+            ("acestream_id", "content_id"),
+            ("ace_id", "content_id"),
+            ("infohash", "infohash"),
+            ("hash", "infohash"),
+            ("id", "content_id"),
         ):
             value = obj.get(key)
             if isinstance(value, str) and valid_hash(value):
-                out.append({
-                    "name": name or "Canal desconocido",
-                    "hash": value.lower(),
-                })
+                found = (value.lower(), kind)
                 break
+
+        if found:
+            avail = obj.get("availability")
+            out.append({
+                "name": name or "Canal desconocido",
+                "hash": found[0],
+                "kind": found[1],
+                "availability": (
+                    avail if isinstance(avail, (int, float)) else None
+                ),
+            })
 
         for value in obj.values():
             if isinstance(value, str):
@@ -170,6 +230,8 @@ def walk_json(obj, out, parent_name=None):
                     out.append({
                         "name": name or "Canal desconocido",
                         "hash": match.group(1).lower(),
+                        "kind": "content_id",
+                        "availability": None,
                     })
             elif isinstance(value, (dict, list)):
                 walk_json(value, out, name)
@@ -180,8 +242,13 @@ def walk_json(obj, out, parent_name=None):
 
 
 def add_channels(store, channels, query):
-    """Anade al diccionario {hash: nombre} sin duplicar. Devuelve nuevos."""
+    """
+    Guarda en store {hash: info} solo los canales que encajan en los
+    grupos. Devuelve (nuevos, descartados).
+    """
     new = 0
+    skipped = 0
+
     for channel in channels:
         hash_id = str(channel.get("hash", "")).strip().lower()
 
@@ -189,9 +256,23 @@ def add_channels(store, channels, query):
             continue
 
         name = clean_name(channel.get("name")) or f"Canal {query}"
-        store[hash_id] = name
+        group = classify_channel(name)
+
+        if group is None:
+            if ONLY_MATCHING:
+                skipped += 1
+                continue
+            group = "OTROS"
+
+        store[hash_id] = {
+            "name": name,
+            "kind": channel.get("kind", "content_id"),
+            "group": group,
+            "availability": channel.get("availability"),
+        }
         new += 1
-    return new
+
+    return new, skipped
 
 
 # ============================================================
@@ -272,20 +353,29 @@ def get_all_results(query):
 
 def run_api_stage(store):
     log("--- Fase 1: API oficial search.acestream.net ---")
+    keys_logged = False
 
     for query in SEARCH_QUERIES:
         log(f"Buscando: {query}")
 
         try:
             results = get_all_results(query)
+
+            if results and not keys_logged and isinstance(results[0], dict):
+                log(f"    Campos de un resultado: {sorted(results[0].keys())}")
+                keys_logged = True
+
             channels = []
             walk_json(results, channels)
-            new = add_channels(store, channels, query)
-            log(f"    Canales extraidos: {len(channels)} | nuevos: {new}")
+            new, skipped = add_channels(store, channels, query)
+            log(
+                f"    Extraidos: {len(channels)} | nuevos: {new} "
+                f"| descartados (no son de tus grupos): {skipped}"
+            )
         except Exception as error:
             log(f"    ERROR en '{query}': {error!r}")
 
-        time.sleep(1)
+        time.sleep(0.5)
 
 
 # ============================================================
@@ -302,10 +392,7 @@ def run_web_stage(store):
         return
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox"],
-        )
+        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         context = browser.new_context(
             user_agent=UA,
             locale="es-ES",
@@ -324,7 +411,7 @@ def run_web_stage(store):
 
         page.on("response", on_response)
 
-        for index, query in enumerate(SEARCH_QUERIES):
+        for index, query in enumerate(WEB_QUERIES):
             log(f"Buscando en web: {query}")
             captured.clear()
 
@@ -365,28 +452,23 @@ def run_web_stage(store):
                         found.append({
                             "name": first_line,
                             "hash": match.group(1).lower(),
+                            "kind": "content_id",
+                            "availability": None,
                         })
                 except Exception as error:
                     log(f"    (enlaces) {error!r}")
 
-                # c) Cualquier acestream:// en el HTML
-                for match in ACE_RE.finditer(page.content()):
-                    found.append({
-                        "name": f"Canal {query}",
-                        "hash": match.group(1).lower(),
-                    })
-
-                new = add_channels(store, found, query)
-                log(f"    Encontrados: {len(found)} | nuevos: {new}")
+                new, skipped = add_channels(store, found, query)
+                log(
+                    f"    Encontrados: {len(found)} | nuevos: {new} "
+                    f"| descartados: {skipped}"
+                )
 
                 if index == 0:
                     try:
                         page.screenshot(path=SCREENSHOT_FILE)
                     except Exception:
                         pass
-                    if new == 0:
-                        body = page.inner_text("body")
-                        log(f"    Texto de la pagina: {body[:300]!r}")
 
             except Exception as error:
                 log(f"    ERROR web en '{query}': {error!r}")
@@ -401,8 +483,9 @@ def run_web_stage(store):
 def generate_m3u():
     now = datetime.datetime.now(datetime.timezone.utc)
     log(f"Inicio: {now.isoformat()}")
+    log(f"Motor de reproduccion: {ENGINE_URL or 'acestream://'}")
 
-    store = {}  # hash -> nombre
+    store = {}  # hash -> info
 
     run_api_stage(store)
     log(f"\nCanales tras la API: {len(store)}")
@@ -415,29 +498,37 @@ def generate_m3u():
         log(f"Canales tras la web: {len(store)}")
 
     if not store:
-        log("\nERROR: no se ha encontrado ningun canal.")
+        log("\nERROR: no se ha encontrado ningun canal de tus grupos.")
         log("No se sobrescribe la lista existente.")
         return
 
-    all_channels = [
-        {"name": name, "hash": hash_id, "group": classify_channel(name)}
-        for hash_id, name in store.items()
-    ]
-    all_channels.sort(key=lambda c: (c["group"], c["name"].lower()))
+    group_order = [g for g, _ in GROUP_RULES] + ["OTROS"]
+
+    def sort_key(item):
+        hash_id, info = item
+        return (
+            group_order.index(info["group"]),
+            natural_key(info["name"]),
+            -(info["availability"] or 0),
+        )
+
+    channels = sorted(store.items(), key=sort_key)
 
     entries = [HEADER_M3U.strip()]
     current_group = None
+    counts = {}
 
-    for channel in all_channels:
-        group = channel["group"]
+    for hash_id, info in channels:
+        group = info["group"]
+        counts[group] = counts.get(group, 0) + 1
 
         if group != current_group:
             entries.append(f'\n#EXTGRP: group-title="{group}"')
             current_group = group
 
-        url = STREAM_TEMPLATE.format(hash=channel["hash"])
+        url = stream_url(hash_id, info["kind"])
         entries.append(
-            f'#EXTINF:-1 group-title="{group}",{channel["name"]}\n{url}'
+            f'#EXTINF:-1 group-title="{group}",{info["name"]}\n{url}'
         )
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as file:
@@ -445,7 +536,9 @@ def generate_m3u():
 
     log("\n====================================")
     log("LISTA M3U GENERADA CORRECTAMENTE")
-    log(f"Canales unicos: {len(all_channels)}")
+    log(f"Canales unicos: {len(channels)}")
+    for group, count in counts.items():
+        log(f"  {group}: {count}")
     log(f"Archivo: {OUTPUT_FILE}")
     log("====================================")
 
