@@ -2,8 +2,8 @@ name: Actualizar Lista M3U
 
 on:
   schedule:
-    - cron: '0 */2 * * *' # Se ejecuta automáticamente cada 2 horas
-  workflow_dispatch: # Permite forzar la ejecución manual cuando tú quieras
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
 
 jobs:
   update:
@@ -19,8 +19,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Instalar dependencias
-        run: pip install requests
+      - name: Instalar dependencias y navegador virtual
+        run: |
+          pip install requests playwright
+          playwright install --with-deps chromium
 
       - name: Ejecutar script de extracción
         run: python actualizar.py
