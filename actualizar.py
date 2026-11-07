@@ -21,13 +21,25 @@ def generate_m3u():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
+        page.goto(BASE_URL, timeout=30000)
+        page.wait_for_load_state("networkidle")
 
         for term in SEARCH_TERMS:
             try:
-                url = f"{BASE_URL}?q={term}"
-                page.goto(url, timeout=30000)
-                # Esperamos 3 segundos a que el navegador cargue los resultados de la búsqueda
-                page.wait_for_timeout(3000)
+                # Buscar el campo de texto e introducir la búsqueda
+                search_input = page.locator("input").first
+                search_input.fill("")
+                search_input.fill(term)
+                
+                # Pulsar el botón de búsqueda o presionar Enter
+                search_button = page.locator("button", has_text=re.compile("Search", re.IGNORECASE)).first
+                if search_button.count() > 0:
+                    search_button.click()
+                else:
+                    search_input.press("Enter")
+
+                # Esperar a que renderice los resultados de los canales
+                page.wait_for_timeout(4000)
                 
                 html_content = page.content()
                 
@@ -63,7 +75,7 @@ def generate_m3u():
     with open("lista.m3u", "w", encoding="utf-8") as f:
         f.write("\n".join(m3u_entries))
     
-    print("¡Lista generada con éxito mediante navegador virtual!")
+    print("¡Lista generada interaccionando con la web!")
 
 if __name__ == "__main__":
     generate_m3u()
