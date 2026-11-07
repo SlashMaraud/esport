@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Genera lista.m3u SOLO con: Movistar, M+, DAZN (y sus variantes), tennis y NBA.
+Genera lista.m3u SOLO con: M. y M+ (Movistar), DAZN, Tennis y NBA,
+incluyendo lo que vaya detras (M. LaLiga, M+ Liga de Campeones, DAZN 1...).
+
+Fuente: https://search-ace.stream/
 
 Estrategia:
-  1) API oficial search.acestream.net (rapida).
-  2) Si no devuelve nada (p. ej. bloqueo de IP en GitHub Actions),
-     abre https://asesearch.vercel.app/ con Playwright y busca ahi.
+  1) Descarga su playlist de canales publicos
+     (https://search-ace.stream/playlist) y filtra por nombre.
+  2) Si no se puede (bloqueo, vacio...), abre la web con Playwright,
+     busca cada termino y captura los resultados.
 
-IMPORTANTE sobre los enlaces:
-  La API devuelve el "infohash" del canal, que NO es lo mismo que el
-  "content id". Un enlace acestream://INFOHASH no abre. Por eso, para
-  los infohash se genera:
-      http://127.0.0.1:6878/ace/getstream?infohash=HASH
-  (hace falta el engine de Ace Stream en marcha en ese equipo).
-  Si tu engine esta en otra IP, cambia ENGINE_URL.
+Los enlaces usan el engine de Ace Stream:
+    http://127.0.0.1:6878/ace/getstream?id=CONTENT_ID
+Si tu engine esta en otra IP, cambia ENGINE_URL.
 
 Escribe debug.txt (y debug.png si usa la web) para ver que paso.
 """
@@ -28,9 +28,8 @@ import requests
 # CONFIGURACION
 # ============================================================
 
-API_URL = "https://search.acestream.net/"
-API_KEY = "test_api_key"
-API_VERSION = 1
+SITE_URL = "https://search-ace.stream/"
+PLAYLIST_URL = "https://search-ace.stream/playlist"
 
 # Engine de Ace Stream que reproducira los enlaces.
 #   Movil con Ace Serve / engine local : "http://127.0.0.1:6878"
@@ -38,65 +37,35 @@ API_VERSION = 1
 #   Vacio ("")                         : usa enlaces acestream://
 ENGINE_URL = "http://127.0.0.1:6878"
 
-WEB_URL = "https://asesearch.vercel.app/"
-USE_WEB_FALLBACK = True   # si la API no da nada, usar la web (Playwright)
-FORCE_WEB = False         # True = usar SIEMPRE la web ademas de la API
+USE_WEB_FALLBACK = True   # si la playlist falla, buscar en la web (Playwright)
+FORCE_WEB = False         # True = usar SIEMPRE la web ademas de la playlist
 
 # True = solo guarda canales que encajen en GROUP_RULES
 ONLY_MATCHING = True
 
 # Grupos: (nombre, regex sobre el nombre en minusculas). Gana el primero.
+#   M.   -> "M. LaLiga", "M. Liga de Campeones"...
+#   M+   -> "M+ LaLiga", "M+ Liga de Campeones", "M+ 1"...
+# Para anadir otro nombre, agrega aqui una linea o amplia una regex.
 GROUP_RULES = [
     ("DAZN", r"\bdazn"),
-    ("MOVISTAR", r"movistar|\bm\+|^m\.\s|^#?\s?vamos\b"),
+    ("MOVISTAR", r"(?<![a-z0-9.])m\+|(?<![a-z0-9.])m\.\s+[a-z0-9]"),
     ("NBA", r"\bnba\b"),
     ("TENIS", r"\b(tennis|tenis)\b"),
 ]
 
-SEARCH_QUERIES = [
-    # Movistar
-    "movistar",
-    "movistar plus",
-    "movistar liga",
-    "movistar liga de campeones",
-    "movistar deportes",
-    "vamos",
-    # M+
-    "m+",
-    "m+ 1",
-    "m+ liga",
-    "m+ laliga",
-    "m+ liga de campeones",
-    "m+ deportes",
-    "m. laliga",
-    "m. liga de campeones",
-    "laliga",
-    "liga de campeones",
-    "champions",
-    # DAZN
-    "dazn",
-    "dazn 1",
-    "dazn 2",
-    "dazn 3",
-    "dazn 4",
-    "dazn laliga",
-    "dazn f1",
-    "dazn motogp",
-    "dazn moto gp",
-    # Tenis y NBA
-    "tennis",
-    "tenis",
-    "nba",
-]
-
-# Busquedas que usa la fase web (mas lenta, solo si la API falla)
+# Terminos que busca la fase web (solo se usa si la playlist falla)
 WEB_QUERIES = [
-    "movistar", "m+", "laliga", "liga de campeones",
-    "dazn", "tennis", "nba",
+    "M.",
+    "M+",
+    "Dazn",
+    "Tennis",
+    "Nba",
+    "M. LaLiga",
+    "M+ Liga de Campeones",
+    "Dazn 1",
 ]
 
-PAGE_SIZE = 200
-MAX_PAGES = 10
 OUTPUT_FILE = "lista.m3u"
 DEBUG_FILE = "debug.txt"
 SCREENSHOT_FILE = "debug.png"
@@ -141,6 +110,10 @@ def write_debug():
 # ============================================================
 
 ACE_RE = re.compile(r"acestream://([a-fA-F0-9]{40})")
+ID_RE = re.compile(
+    r"(?:[?&](id|content_id|infohash)=|acestream://\??(?:infohash=)?)"
+    r"([a-fA-F0-9]{40})"
+)
 
 
 def valid_hash(hash_id):
@@ -175,8 +148,8 @@ def natural_key(text):
 
 def stream_url(hash_id, kind):
     """
-    kind = "infohash"    -> hash de torrent (lo que da la API de busqueda)
-    kind = "content_id"  -> ID de contenido (el de acestream://)
+    kind = "content_id" -> ID de contenido (lo normal en search-ace.stream)
+    kind = "infohash"   -> hash de torrent
     """
     if ENGINE_URL:
         param = "infohash" if kind == "infohash" else "id"
@@ -185,60 +158,6 @@ def stream_url(hash_id, kind):
     if kind == "infohash":
         return f"acestream://?infohash={hash_id}"
     return f"acestream://{hash_id}"
-
-
-def walk_json(obj, out, parent_name=None):
-    """
-    Recorre cualquier JSON (API o web) y recoge canales:
-    {name, hash, kind, availability}. Si hay content_id lo prefiere
-    sobre el infohash.
-    """
-    if isinstance(obj, dict):
-        raw_name = obj.get("name") or obj.get("title") or obj.get("channel")
-        name = raw_name if isinstance(raw_name, str) and raw_name else parent_name
-
-        found = None
-        for key, kind in (
-            ("content_id", "content_id"),
-            ("contentId", "content_id"),
-            ("acestream_id", "content_id"),
-            ("ace_id", "content_id"),
-            ("infohash", "infohash"),
-            ("hash", "infohash"),
-            ("id", "content_id"),
-        ):
-            value = obj.get(key)
-            if isinstance(value, str) and valid_hash(value):
-                found = (value.lower(), kind)
-                break
-
-        if found:
-            avail = obj.get("availability")
-            out.append({
-                "name": name or "Canal desconocido",
-                "hash": found[0],
-                "kind": found[1],
-                "availability": (
-                    avail if isinstance(avail, (int, float)) else None
-                ),
-            })
-
-        for value in obj.values():
-            if isinstance(value, str):
-                match = ACE_RE.search(value)
-                if match:
-                    out.append({
-                        "name": name or "Canal desconocido",
-                        "hash": match.group(1).lower(),
-                        "kind": "content_id",
-                        "availability": None,
-                    })
-            elif isinstance(value, (dict, list)):
-                walk_json(value, out, name)
-
-    elif isinstance(obj, list):
-        for value in obj:
-            walk_json(value, out, parent_name)
 
 
 def add_channels(store, channels, query):
@@ -268,122 +187,164 @@ def add_channels(store, channels, query):
             "name": name,
             "kind": channel.get("kind", "content_id"),
             "group": group,
-            "availability": channel.get("availability"),
         }
         new += 1
 
     return new, skipped
 
 
+def walk_json(obj, out, parent_name=None):
+    """Recorre cualquier JSON y recoge canales {name, hash, kind}."""
+    if isinstance(obj, dict):
+        raw_name = (
+            obj.get("name") or obj.get("title") or obj.get("channel")
+        )
+        name = raw_name if isinstance(raw_name, str) and raw_name else parent_name
+
+        for key, kind in (
+            ("content_id", "content_id"),
+            ("contentId", "content_id"),
+            ("id", "content_id"),
+            ("infohash", "infohash"),
+            ("hash", "infohash"),
+        ):
+            value = obj.get(key)
+            if isinstance(value, str) and valid_hash(value):
+                out.append({
+                    "name": name or "Canal desconocido",
+                    "hash": value.lower(),
+                    "kind": kind,
+                })
+                break
+
+        for value in obj.values():
+            if isinstance(value, str):
+                match = ACE_RE.search(value)
+                if match:
+                    out.append({
+                        "name": name or "Canal desconocido",
+                        "hash": match.group(1).lower(),
+                        "kind": "content_id",
+                    })
+            elif isinstance(value, (dict, list)):
+                walk_json(value, out, name)
+
+    elif isinstance(obj, list):
+        for value in obj:
+            walk_json(value, out, parent_name)
+
+
 # ============================================================
-# FASE 1: API OFICIAL
+# FASE 1: PLAYLIST DE search-ace.stream
 # ============================================================
 
-session = requests.Session()
-session.headers.update({
-    "User-Agent": UA,
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-})
+def extinf_name(line):
+    """Nombre de una linea #EXTINF (texto tras la primera coma fuera de comillas)."""
+    in_quotes = False
+    for index, char in enumerate(line):
+        if char == '"':
+            in_quotes = not in_quotes
+        elif char == "," and not in_quotes:
+            return line[index + 1:].strip()
+    return ""
 
 
-def search_api(query, page=0):
-    params = {
-        "method": "search",
-        "api_version": API_VERSION,
-        "api_key": API_KEY,
-        "query": query,
-        "page": page,
-        "page_size": PAGE_SIZE,
-    }
+def parse_m3u(text):
+    """Lee una playlist M3U y devuelve [{name, hash, kind}]."""
+    channels = []
+    name = None
 
-    response = session.get(API_URL, params=params, timeout=30)
+    for raw in text.splitlines():
+        line = raw.strip()
 
-    if page == 0:
-        log(f"    HTTP {response.status_code} | {response.text[:150]!r}")
+        if not line:
+            continue
 
-    response.raise_for_status()
-    data = response.json()
+        if line.startswith("#EXTINF"):
+            name = extinf_name(line)
+            continue
 
-    if data.get("error"):
-        raise RuntimeError(str(data["error"]))
+        if line.startswith("#"):
+            continue
 
-    result = data.get("result")
-    if not isinstance(result, dict):
-        # La API real responde sin el envoltorio "result":
-        # {"total": 7, "results": [...]}
-        result = data
-    if not isinstance(result, dict):
-        return [], 0
+        match = ID_RE.search(line)
+        if match:
+            kind = "infohash" if match.group(1) == "infohash" else "content_id"
+            channels.append({
+                "name": name or "Canal desconocido",
+                "hash": match.group(2).lower(),
+                "kind": kind,
+            })
+        name = None
 
-    results = result.get("results") or []
-    if not isinstance(results, list):
-        results = []
+    return channels
+
+
+def run_playlist_stage(store):
+    log("--- Fase 1: playlist de search-ace.stream ---")
 
     try:
-        total = int(result.get("total", len(results)))
-    except (TypeError, ValueError):
-        total = len(results)
-
-    return results, total
-
-
-def get_all_results(query):
-    all_results = []
-
-    for page in range(MAX_PAGES):
-        results, total = search_api(query, page)
-
-        if not results:
-            break
-
-        all_results.extend(results)
+        response = requests.get(
+            PLAYLIST_URL,
+            headers={
+                "User-Agent": UA,
+                "Accept": "*/*",
+                "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+            },
+            timeout=90,
+        )
         log(
-            f"    Pagina {page + 1}: {len(results)} resultados "
-            f"(total anunciado: {total})"
+            f"    HTTP {response.status_code} | "
+            f"{len(response.content)} bytes | "
+            f"{response.headers.get('content-type')}"
         )
 
-        if len(all_results) >= total or len(results) < PAGE_SIZE:
-            break
+        response.raise_for_status()
+        text = response.text
 
-        time.sleep(0.5)
+        lines = [l for l in text.splitlines() if l.strip()]
+        for line in lines[:6]:
+            log(f"    > {line[:160]}")
 
-    return all_results
+        channels = parse_m3u(text)
+        new, skipped = add_channels(store, channels, "playlist")
+        log(
+            f"    Canales en la playlist: {len(channels)} | "
+            f"guardados: {new} | descartados (no son de tus grupos): {skipped}"
+        )
 
-
-def run_api_stage(store):
-    log("--- Fase 1: API oficial search.acestream.net ---")
-    keys_logged = False
-
-    for query in SEARCH_QUERIES:
-        log(f"Buscando: {query}")
-
-        try:
-            results = get_all_results(query)
-
-            if results and not keys_logged and isinstance(results[0], dict):
-                log(f"    Campos de un resultado: {sorted(results[0].keys())}")
-                keys_logged = True
-
-            channels = []
-            walk_json(results, channels)
-            new, skipped = add_channels(store, channels, query)
-            log(
-                f"    Extraidos: {len(channels)} | nuevos: {new} "
-                f"| descartados (no son de tus grupos): {skipped}"
-            )
-        except Exception as error:
-            log(f"    ERROR en '{query}': {error!r}")
-
-        time.sleep(0.5)
+    except Exception as error:
+        log(f"    ERROR descargando la playlist: {error!r}")
 
 
 # ============================================================
-# FASE 2: WEB asesearch CON PLAYWRIGHT
+# FASE 2: WEB search-ace.stream CON PLAYWRIGHT
 # ============================================================
+
+# Busca en el DOM cualquier hash de 40 caracteres y el texto de su "fila"
+JS_FIND_HASHES = """
+() => {
+  const re = /[a-f0-9]{40}/i;
+  const rows = [];
+  for (const el of document.querySelectorAll('*')) {
+    const attrs = Array.from(el.attributes).map(a => a.value).join(' ');
+    const own = Array.from(el.childNodes)
+      .filter(n => n.nodeType === 3).map(n => n.textContent).join(' ');
+    const m = (attrs + ' ' + own).match(re);
+    if (m) {
+      const box = el.closest(
+        'tr, li, article, .card, .result, [class*=item], [class*=row]'
+      ) || el.parentElement;
+      rows.push({hash: m[0].toLowerCase(), text: (box ? box.innerText : '') || ''});
+    }
+  }
+  return rows;
+}
+"""
+
 
 def run_web_stage(store):
-    log("\n--- Fase 2: web asesearch (Playwright) ---")
+    log("\n--- Fase 2: web search-ace.stream (Playwright) ---")
 
     try:
         from playwright.sync_api import sync_playwright
@@ -416,7 +377,7 @@ def run_web_stage(store):
             captured.clear()
 
             try:
-                page.goto(WEB_URL, wait_until="networkidle", timeout=60000)
+                page.goto(SITE_URL, wait_until="networkidle", timeout=60000)
 
                 box = page.locator("input:visible").first
                 box.wait_for(state="visible", timeout=15000)
@@ -436,27 +397,20 @@ def run_web_stage(store):
                     log(f"    JSON: {url[:110]}")
                     walk_json(data, found)
 
-                # b) Enlaces acestream:// visibles, con su nombre
+                # b) Hashes que aparecen en la pagina, con el texto de su fila
                 try:
-                    links = page.locator('a[href^="acestream://"]').all()
-                    for link in links[:300]:
-                        href = link.get_attribute("href") or ""
-                        match = ACE_RE.search(href)
-                        if not match:
-                            continue
-                        text = link.evaluate(
-                            "el => ((el.closest('li, tr, article, div')"
-                            " || el).innerText || '')"
-                        )
-                        first_line = (text or "").strip().split("\n")[0]
+                    for row in page.evaluate(JS_FIND_HASHES)[:2000]:
+                        lines = [
+                            l.strip() for l in (row["text"] or "").split("\n")
+                            if l.strip() and row["hash"] not in l.lower()
+                        ]
                         found.append({
-                            "name": first_line,
-                            "hash": match.group(1).lower(),
+                            "name": lines[0] if lines else "",
+                            "hash": row["hash"],
                             "kind": "content_id",
-                            "availability": None,
                         })
                 except Exception as error:
-                    log(f"    (enlaces) {error!r}")
+                    log(f"    (dom) {error!r}")
 
                 new, skipped = add_channels(store, found, query)
                 log(
@@ -469,9 +423,14 @@ def run_web_stage(store):
                         page.screenshot(path=SCREENSHOT_FILE)
                     except Exception:
                         pass
+                    if not found:
+                        body = page.inner_text("body")
+                        log(f"    Texto de la pagina: {body[:300]!r}")
 
             except Exception as error:
                 log(f"    ERROR web en '{query}': {error!r}")
+
+            time.sleep(0.5)
 
         browser.close()
 
@@ -487,8 +446,8 @@ def generate_m3u():
 
     store = {}  # hash -> info
 
-    run_api_stage(store)
-    log(f"\nCanales tras la API: {len(store)}")
+    run_playlist_stage(store)
+    log(f"\nCanales tras la playlist: {len(store)}")
 
     if FORCE_WEB or (not store and USE_WEB_FALLBACK):
         try:
@@ -509,7 +468,6 @@ def generate_m3u():
         return (
             group_order.index(info["group"]),
             natural_key(info["name"]),
-            -(info["availability"] or 0),
         )
 
     channels = sorted(store.items(), key=sort_key)
