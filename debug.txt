@@ -1,121 +1,22 @@
-Inicio: 2026-11-07T17:09:00.637228+00:00
+Inicio: 2026-11-07T17:59:54.868035+00:00
 Motor de reproduccion: http://127.0.0.1:6878
---- Fase 1: API oficial search.acestream.net ---
-Buscando: movistar
-    HTTP 200 | '{"total":7,"time":"0.0989","groupped":false,"results":[{"infohash":"318c12f5f40d7bd9c0ab0c130bf9b96668098279","name":"Movistar+","categories":["amateu'
-    Pagina 1: 7 resultados (total anunciado: 7)
-    Campos de un resultado: ['availability', 'availability_updated_at', 'bitrate', 'categories', 'infohash', 'name']
-    Extraidos: 7 | nuevos: 7 | descartados (no son de tus grupos): 0
-Buscando: movistar plus
-    HTTP 200 | '{"total":0,"time":"0.0712","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: movistar liga
-    HTTP 200 | '{"total":0,"time":"0.0466","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: movistar liga de campeones
-    HTTP 200 | '{"total":0,"time":"0.0694","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: movistar deportes
-    HTTP 200 | '{"total":1,"time":"0.0718","groupped":false,"results":[{"infohash":"b853818b57c4cf6274c60c66aaa539b28e3148c8","name":"Movistar Deportes","categories":'
-    Pagina 1: 1 resultados (total anunciado: 1)
-    Extraidos: 1 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: vamos
-    HTTP 200 | '{"total":1,"time":"0.0781","groupped":false,"results":[{"infohash":"fb1ad4ad54040a15c50919e72cac466abc62a145","name":"Vamos","categories":["amateur"],'
-    Pagina 1: 1 resultados (total anunciado: 1)
-    Extraidos: 1 | nuevos: 1 | descartados (no son de tus grupos): 0
-Buscando: m+
-    HTTP 200 | '{"total":12,"time":"0.0996","groupped":false,"results":[{"infohash":"acc20f3739d9eccd0539f0c62519f35b8750a245","name":"M+ DRAMA HD Spain","categories"'
-    Pagina 1: 12 resultados (total anunciado: 12)
-    Extraidos: 12 | nuevos: 12 | descartados (no son de tus grupos): 0
-Buscando: m+ 1
-    HTTP 200 | '{"total":2,"time":"0.0747","groupped":false,"results":[{"infohash":"e04452a72846e0c2785a55a3addea9f72649d93d","name":"M+ Deportes 6 1080 elcano.top ze'
-    Pagina 1: 2 resultados (total anunciado: 2)
-    Extraidos: 2 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: m+ liga
-    HTTP 200 | '{"total":0,"time":"0.0747","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: m+ laliga
-    HTTP 200 | '{"total":0,"time":"0.0552","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: m+ liga de campeones
-    HTTP 200 | '{"total":0,"time":"0.0766","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: m+ deportes
-    HTTP 200 | '{"total":1,"time":"0.0930","groupped":false,"results":[{"infohash":"e04452a72846e0c2785a55a3addea9f72649d93d","name":"M+ Deportes 6 1080 elcano.top ze'
-    Pagina 1: 1 resultados (total anunciado: 1)
-    Extraidos: 1 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: m. laliga
-    HTTP 200 | '{"total":5,"time":"0.0968","groupped":false,"results":[{"infohash":"c1959a27edb0b94c5005a2dea93b7a70d4312f1c","name":"M. LaLiga","categories":["sport"'
-    Pagina 1: 5 resultados (total anunciado: 5)
-    Extraidos: 5 | nuevos: 4 | descartados (no son de tus grupos): 0
-Buscando: m. liga de campeones
-    HTTP 200 | '{"total":5,"time":"0.1001","groupped":false,"results":[{"infohash":"8c1c3eae077f3a786ed2f0a426197ea93fdf7373","name":"M. Liga de Campeones","categorie'
-    Pagina 1: 5 resultados (total anunciado: 5)
-    Extraidos: 5 | nuevos: 5 | descartados (no son de tus grupos): 0
-Buscando: laliga
-    HTTP 200 | '{"total":8,"time":"0.0538","groupped":false,"results":[{"infohash":"8a25653a2f774f4ae1062d38a30dcd714d304a3a","name":"DAZN LaLiga","categories":["spor'
-    Pagina 1: 8 resultados (total anunciado: 8)
-    Extraidos: 8 | nuevos: 2 | descartados (no son de tus grupos): 1
-Buscando: liga de campeones
-    HTTP 200 | '{"total":5,"time":"0.1006","groupped":false,"results":[{"infohash":"8c1c3eae077f3a786ed2f0a426197ea93fdf7373","name":"M. Liga de Campeones","categorie'
-    Pagina 1: 5 resultados (total anunciado: 5)
-    Extraidos: 5 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: champions
-    HTTP 200 | '{"total":0,"time":"0.0667","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: dazn
-    HTTP 200 | '{"total":13,"time":"0.0933","groupped":false,"results":[{"infohash":"0560234787945a17522e284c4c22bb4df29f33b0","name":"DAZN1","categories":["sport"],"'
-    Pagina 1: 13 resultados (total anunciado: 13)
-    Extraidos: 13 | nuevos: 11 | descartados (no son de tus grupos): 0
-Buscando: dazn 1
-    HTTP 200 | '{"total":3,"time":"0.0754","groupped":false,"results":[{"infohash":"d0a5eb107ed5d70f542e7483e2d0f9068b15f6c4","name":"DAZN 1 Bar HD [DE]","categories"'
-    Pagina 1: 3 resultados (total anunciado: 3)
-    Extraidos: 3 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: dazn 2
-    HTTP 200 | '{"total":1,"time":"0.0717","groupped":false,"results":[{"infohash":"7d64b566d7f3a8e892a1a8cafc9521b9cddd5df6","name":"DAZN 2 Bar HD [DE]","categories"'
-    Pagina 1: 1 resultados (total anunciado: 1)
-    Extraidos: 1 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: dazn 3
-    HTTP 200 | '{"total":0,"time":"0.0540","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: dazn 4
-    HTTP 200 | '{"total":1,"time":"0.0908","groupped":false,"results":[{"infohash":"aa268bdcd9a25e28372f938f39afd972726f94df","name":"Dazn MotoGP 1080 elcano.top zero'
-    Pagina 1: 1 resultados (total anunciado: 1)
-    Extraidos: 1 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: dazn laliga
-    HTTP 200 | '{"total":2,"time":"0.0731","groupped":false,"results":[{"infohash":"8a25653a2f774f4ae1062d38a30dcd714d304a3a","name":"DAZN LaLiga","categories":["spor'
-    Pagina 1: 2 resultados (total anunciado: 2)
-    Extraidos: 2 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: dazn f1
-    HTTP 200 | '{"total":2,"time":"0.0918","groupped":false,"results":[{"infohash":"6d325cda6ed591647ef5e91edd043147bce8be30","name":"DAZN F1 HD","categories":["sport'
-    Pagina 1: 2 resultados (total anunciado: 2)
-    Extraidos: 2 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: dazn motogp
-    HTTP 200 | '{"total":2,"time":"0.0936","groupped":false,"results":[{"infohash":"0d4b3b5f63c6afd180d9e5e2e57528e15a5218ab","name":"DAZN MotoGP Shickat | shickat.on'
-    Pagina 1: 2 resultados (total anunciado: 2)
-    Extraidos: 2 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: dazn moto gp
-    HTTP 200 | '{"total":0,"time":"0.0671","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: tennis
-    HTTP 200 | '{"total":1,"time":"0.0912","groupped":false,"results":[{"infohash":"1b348443efc7f0cf4cdf349ac35bbe5d41be6220","name":"Tennis Channel HD","categories":'
-    Pagina 1: 1 resultados (total anunciado: 1)
-    Extraidos: 1 | nuevos: 1 | descartados (no son de tus grupos): 0
-Buscando: tenis
-    HTTP 200 | '{"total":0,"time":"0.0734","groupped":false,"results":[]}'
-    Extraidos: 0 | nuevos: 0 | descartados (no son de tus grupos): 0
-Buscando: nba
-    HTTP 200 | '{"total":1,"time":"0.0745","groupped":false,"results":[{"infohash":"42832fbf9a1d3bdcca043e09951d6769fbbe04e7","name":"NBA TV [US]","categories":["spor'
-    Pagina 1: 1 resultados (total anunciado: 1)
-    Extraidos: 1 | nuevos: 1 | descartados (no son de tus grupos): 0
+--- Fase 1: playlist de search-ace.stream ---
+    HTTP 200 | 262903 bytes | application/x-mpegURL
+    > #EXTM3U
+    > #EXTINF:-1,.black [RU]
+    > http://127.0.0.1:6878/ace/getstream?infohash=18cf2d3491233fa980add6db246847a5077be047&pid=1
+    > #EXTINF:-1,.red [RU]
+    > http://127.0.0.1:6878/ace/getstream?infohash=cd680104166a605ed27730dcaec73bf81221d540&pid=2
+    > #EXTINF:-1,.sci-fi [RU]
+    Canales en la playlist: 2122 | guardados: 59 | descartados (no son de tus grupos): 2063
 
-Canales tras la API: 44
+Canales tras la playlist: 59
 
 ====================================
 LISTA M3U GENERADA CORRECTAMENTE
-Canales unicos: 44
-  DAZN: 13
-  MOVISTAR: 29
+Canales unicos: 59
+  DAZN: 22
+  MOVISTAR: 35
   NBA: 1
   TENIS: 1
 Archivo: lista.m3u
