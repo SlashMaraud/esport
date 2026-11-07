@@ -34,6 +34,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add lista.m3u debug.txt
-          if [ -f debug.png ]; then git add debug.png; fi
+          git add lista.m3u
           git diff --staged --quiet || (git commit -m "Auto-actualizacion de lista.m3u" && git push)
