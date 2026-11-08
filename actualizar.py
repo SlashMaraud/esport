@@ -1,27 +1,32 @@
 #!/usr/bin/env python3
 """
 Genera lista.m3u SOLO con: M. y M+ (Movistar), DAZN, Tennis y NBA,
-incluyendo lo que vaya detras (M. LaLiga, M+ Liga de Campeones, DAZN 1...).
+incluyendo lo que vaya detras (M+ LaLiga, M+ Liga de Campeones, DAZN 1...).
 
 Fuente: https://search-ace.stream/
 
 Estrategia:
-  1) Descarga su playlist de canales publicos
-     (https://search-ace.stream/playlist) y filtra por nombre.
-  2) Si no se puede (bloqueo, vacio...), abre la web con Playwright,
-     busca cada termino y captura los resultados.
+  1) Descarga su playlist de canales publicos y filtra por nombre.
+  2) Si no se puede, abre la web con Playwright y busca cada termino.
+  3) Renombra "M. LaLiga" -> "Movistar LaLiga" (M. = Movistar) para que
+     tu app haga match con los eventos. Los "M+" se dejan como estan.
+  4) Los canales que vengan con infohash los convierte a content id
+     (el "id" que abre en TODOS los reproductores) usando un engine de
+     Ace Stream temporal en Docker. Si no se puede, ver INFOHASH_FALLBACK.
 
 Los enlaces usan el engine de Ace Stream:
     http://127.0.0.1:6878/ace/getstream?id=CONTENT_ID
-Si tu engine esta en otra IP, cambia ENGINE_URL.
 
-Escribe debug.txt (y debug.png si usa la web) para ver que paso.
+Escribe debug.txt (y debug.png si usa la web). El workflow ya no los guarda
+en el repo, pero los ves en el log de Actions.
 """
 
 import re
 import sys
 import time
+import shutil
 import datetime
+import subprocess
 import requests
 
 # ============================================================
@@ -43,13 +48,18 @@ FORCE_WEB = False         # True = usar SIEMPRE la web ademas de la playlist
 # True = solo guarda canales que encajen en GROUP_RULES
 ONLY_MATCHING = True
 
+# Cambios de nombre para que tu app haga match con futbolenlatv.es
+# (regex, sustitucion). Se aplican ANTES de clasificar el canal.
+NAME_FIXES = [
+    # "M. LaLiga" -> "Movistar LaLiga"
+    # "M. Liga de Campeones 2" -> "Movistar Liga de Campeones 2"
+    (r"(?<![a-z0-9.])m\.\s+", "Movistar "),
+]
+
 # Grupos: (nombre, regex sobre el nombre en minusculas). Gana el primero.
-#   M.   -> "M. LaLiga", "M. Liga de Campeones"...
-#   M+   -> "M+ LaLiga", "M+ Liga de Campeones", "M+ 1"...
-# Para anadir otro nombre, agrega aqui una linea o amplia una regex.
 GROUP_RULES = [
     ("DAZN", r"\bdazn"),
-    ("MOVISTAR", r"(?<![a-z0-9.])m\+|(?<![a-z0-9.])m\.\s+[a-z0-9]"),
+    ("MOVISTAR", r"(?<![a-z0-9.])m\+|(?<![a-z0-9.])m\.\s+\S"),
     ("NBA", r"\bnba\b"),
     ("TENIS", r"\b(tennis|tenis)\b"),
 ]
@@ -65,6 +75,22 @@ WEB_QUERIES = [
     "M+ Liga de Campeones",
     "Dazn 1",
 ]
+
+# --- Conversion infohash -> content id --------------------------------
+# Los enlaces con infohash no los abren todos los reproductores. Si hay
+# alguno, el script levanta un engine de Ace Stream en Docker (solo en
+# GitHub Actions), pregunta el content id y lo apaga.
+CONVERT_INFOHASH = True
+ACE_DOCKER_IMAGE = "ghcr.io/martinbjeldbak/acestream-http-proxy"
+CONVERT_PORT = 6878
+CONVERT_START_WAIT = 90       # segundos esperando a que arranque el engine
+CONVERT_TIMEOUT_EACH = 20     # segundos maximos por canal
+CONVERT_TIMEOUT_TOTAL = 360   # segundos maximos en total
+
+# Si un infohash no se puede convertir:
+#   "keep" = lo deja con infohash (Ace Stream lo abre, otros reproductores no)
+#   "drop" = lo quita de la lista (solo quedan enlaces con id)
+INFOHASH_FALLBACK = "keep"
 
 OUTPUT_FILE = "lista.m3u"
 DEBUG_FILE = "debug.txt"
@@ -129,6 +155,13 @@ def clean_name(name):
     return name.strip()
 
 
+def fix_name(name):
+    """Aplica NAME_FIXES (p. ej. 'M. LaLiga' -> 'Movistar LaLiga')."""
+    for pattern, replacement in NAME_FIXES:
+        name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
+    return name
+
+
 def classify_channel(name):
     """Devuelve el grupo del canal, o None si no nos interesa."""
     n = name.lower()
@@ -148,8 +181,8 @@ def natural_key(text):
 
 def stream_url(hash_id, kind):
     """
-    kind = "content_id" -> ID de contenido (lo normal en search-ace.stream)
-    kind = "infohash"   -> hash de torrent
+    kind = "content_id" -> ID de contenido (abre en todos los reproductores)
+    kind = "infohash"   -> hash de torrent (solo lo entiende Ace Stream)
     """
     if ENGINE_URL:
         param = "infohash" if kind == "infohash" else "id"
@@ -175,7 +208,8 @@ def add_channels(store, channels, query):
             continue
 
         name = clean_name(channel.get("name")) or f"Canal {query}"
-        group = classify_channel(name)
+        group = classify_channel(name)   # sobre el nombre original
+        name = fix_name(name)            # y despues se renombra
 
         if group is None:
             if ONLY_MATCHING:
@@ -307,10 +341,18 @@ def run_playlist_stage(store):
             log(f"    > {line[:160]}")
 
         channels = parse_m3u(text)
+        kinds = {"content_id": 0, "infohash": 0}
+        for channel in channels:
+            kinds[channel["kind"]] = kinds.get(channel["kind"], 0) + 1
+        log(
+            f"    Enlaces en la playlist: con id {kinds['content_id']} | "
+            f"con infohash {kinds['infohash']}"
+        )
+
         new, skipped = add_channels(store, channels, "playlist")
         log(
-            f"    Canales en la playlist: {len(channels)} | "
-            f"guardados: {new} | descartados (no son de tus grupos): {skipped}"
+            f"    Guardados: {new} | "
+            f"descartados (no son de tus grupos): {skipped}"
         )
 
     except Exception as error:
@@ -436,6 +478,141 @@ def run_web_stage(store):
 
 
 # ============================================================
+# FASE 3: CONVERTIR infohash -> content id (engine temporal en Docker)
+# ============================================================
+
+ENGINE_CONTAINER = "ace-engine-temp"
+
+
+def start_engine():
+    """Arranca un engine de Ace Stream en Docker. Devuelve la URL base o None."""
+    if not shutil.which("docker"):
+        log("    Docker no esta disponible en este equipo.")
+        return None
+
+    try:
+        subprocess.run(
+            ["docker", "rm", "-f", ENGINE_CONTAINER],
+            capture_output=True, text=True, timeout=60,
+        )
+        result = subprocess.run(
+            [
+                "docker", "run", "-d", "--name", ENGINE_CONTAINER,
+                "-p", f"{CONVERT_PORT}:6878", ACE_DOCKER_IMAGE,
+            ],
+            capture_output=True, text=True, timeout=400,
+        )
+    except Exception as error:
+        log(f"    Error lanzando Docker: {error!r}")
+        return None
+
+    if result.returncode != 0:
+        log(f"    No arranco el contenedor: {result.stderr.strip()[:300]}")
+        return None
+
+    base = f"http://127.0.0.1:{CONVERT_PORT}"
+    deadline = time.time() + CONVERT_START_WAIT
+
+    while time.time() < deadline:
+        try:
+            response = requests.get(
+                f"{base}/server/api",
+                params={"api_version": 3, "method": "get_version"},
+                timeout=5,
+            )
+            if response.status_code < 500:
+                log("    Engine temporal listo.")
+                return base
+        except Exception:
+            pass
+        time.sleep(2)
+
+    log("    El engine temporal no respondio a tiempo.")
+    stop_engine()
+    return None
+
+
+def stop_engine():
+    try:
+        subprocess.run(
+            ["docker", "rm", "-f", ENGINE_CONTAINER],
+            capture_output=True, text=True, timeout=60,
+        )
+    except Exception:
+        pass
+
+
+def get_content_id(base, infohash):
+    """Pregunta al engine el content id de un infohash (o None)."""
+    response = requests.get(
+        f"{base}/server/api",
+        params={
+            "api_version": 3,
+            "method": "get_content_id",
+            "infohash": infohash,
+        },
+        timeout=CONVERT_TIMEOUT_EACH,
+    )
+    data = response.json()
+
+    if data.get("error"):
+        return None
+
+    result = data.get("result")
+    content_id = result.get("content_id") if isinstance(result, dict) else None
+
+    if isinstance(content_id, str) and valid_hash(content_id):
+        return content_id.lower()
+    return None
+
+
+def convert_infohashes(store):
+    pending = [h for h, info in store.items() if info["kind"] == "infohash"]
+
+    if not pending:
+        return
+
+    log(f"\n--- Fase 3: convertir infohash -> id ({len(pending)} canales) ---")
+
+    if not CONVERT_INFOHASH:
+        log("    Conversion desactivada (CONVERT_INFOHASH = False).")
+        return
+
+    base = start_engine()
+    if not base:
+        log("    No se pudo convertir; se aplica INFOHASH_FALLBACK.")
+        return
+
+    converted = 0
+    started = time.time()
+
+    try:
+        for infohash in pending:
+            if time.time() - started > CONVERT_TIMEOUT_TOTAL:
+                log("    Tiempo maximo de conversion alcanzado.")
+                break
+
+            try:
+                content_id = get_content_id(base, infohash)
+            except Exception as error:
+                log(f"    {infohash[:8]}...: {type(error).__name__}")
+                continue
+
+            if not content_id:
+                continue
+
+            info = store.pop(infohash)
+            if content_id not in store:
+                info["kind"] = "content_id"
+                store[content_id] = info
+                converted += 1
+    finally:
+        stop_engine()
+
+    log(f"    Convertidos a id: {converted} de {len(pending)}")
+
+
+# ============================================================
 # GENERACION M3U
 # ============================================================
 
@@ -455,6 +632,26 @@ def generate_m3u():
         except Exception as error:
             log(f"ERROR en fase web: {error!r}")
         log(f"Canales tras la web: {len(store)}")
+
+    if store:
+        try:
+            convert_infohashes(store)
+        except Exception as error:
+            log(f"ERROR en la conversion: {error!r}")
+            stop_engine()
+
+    # Lo que siga con infohash tras la conversion
+    leftovers = [h for h, info in store.items() if info["kind"] == "infohash"]
+    if leftovers:
+        if INFOHASH_FALLBACK == "drop":
+            for h in leftovers:
+                store.pop(h, None)
+            log(f"\nQuitados {len(leftovers)} canales que solo tienen infohash.")
+        else:
+            log(
+                f"\nAviso: {len(leftovers)} canales siguen con infohash "
+                "(otros reproductores pueden no abrirlos)."
+            )
 
     if not store:
         log("\nERROR: no se ha encontrado ningun canal de tus grupos.")
@@ -492,9 +689,11 @@ def generate_m3u():
     with open(OUTPUT_FILE, "w", encoding="utf-8") as file:
         file.write("\n".join(entries) + "\n")
 
+    with_id = sum(1 for _, i in channels if i["kind"] == "content_id")
+
     log("\n====================================")
     log("LISTA M3U GENERADA CORRECTAMENTE")
-    log(f"Canales unicos: {len(channels)}")
+    log(f"Canales unicos: {len(channels)} (con id: {with_id})")
     for group, count in counts.items():
         log(f"  {group}: {count}")
     log(f"Archivo: {OUTPUT_FILE}")
@@ -509,5 +708,5 @@ if __name__ == "__main__":
     finally:
         write_debug()
 
-    # Salir siempre bien para que el workflow guarde debug.txt
+    # Salir siempre bien para que el workflow guarde la lista
     sys.exit(0)
