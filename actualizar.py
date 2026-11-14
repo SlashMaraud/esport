@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Genera lista.m3u SOLO con: M. y M+ (Movistar), DAZN, Tennis y NBA,
-incluyendo lo que vaya detras (M+ LaLiga, M+ Liga de Campeones, DAZN 1...).
+Genera lista.m3u SOLO con: Movistar, M. y M+ (Movistar), DAZN, Tennis y NBA,
+incluyendo lo que vaya detras (Movistar LaLiga, M+ Liga de Campeones,
+DAZN 1...). Descarta los canales que lleven "new era" en el nombre.
 
 Fuente: https://search-ace.stream/
 
@@ -56,21 +57,31 @@ NAME_FIXES = [
     (r"(?<![a-z0-9.])m\.\s+", "Movistar "),
 ]
 
+# Canales que se DESCARTAN si su nombre coincide con alguno de estos patrones
+# (regex, sin distinguir mayusculas). Ej.: "DAZN 1 FHD (SAT) --> NEW ERA"
+# Para excluir mas cosas, anade otra linea con su patron.
+EXCLUDE_NAME_PATTERNS = [
+    r"(?<![a-z])new[\s_\-]*era(?![a-z])",
+]
+EXCLUDED_NAMES = []   # nombres descartados (solo para el log)
+
 # Grupos: (nombre, regex sobre el nombre en minusculas). Gana el primero.
 GROUP_RULES = [
     ("DAZN", r"\bdazn"),
-    ("MOVISTAR", r"(?<![a-z0-9.])m\+|(?<![a-z0-9.])m\.\s+\S"),
+    ("MOVISTAR", r"movistar|(?<![a-z0-9.])m\+|(?<![a-z0-9.])m\.\s+\S"),
     ("NBA", r"\bnba\b"),
     ("TENIS", r"\b(tennis|tenis)\b"),
 ]
 
 # Terminos que busca la fase web (solo se usa si la playlist falla)
 WEB_QUERIES = [
+    "Movistar",
     "M.",
     "M+",
     "Dazn",
     "Tennis",
     "Nba",
+    "Movistar LaLiga",
     "M. LaLiga",
     "M+ Liga de Campeones",
     "Dazn 1",
@@ -162,6 +173,14 @@ def fix_name(name):
     return name
 
 
+def is_excluded(name):
+    """True si el nombre coincide con EXCLUDE_NAME_PATTERNS."""
+    return any(
+        re.search(pattern, name, re.IGNORECASE)
+        for pattern in EXCLUDE_NAME_PATTERNS
+    )
+
+
 def classify_channel(name):
     """Devuelve el grupo del canal, o None si no nos interesa."""
     n = name.lower()
@@ -208,6 +227,11 @@ def add_channels(store, channels, query):
             continue
 
         name = clean_name(channel.get("name")) or f"Canal {query}"
+
+        if is_excluded(name):
+            EXCLUDED_NAMES.append(name)
+            continue
+
         group = classify_channel(name)   # sobre el nombre original
         name = fix_name(name)            # y despues se renombra
 
@@ -694,6 +718,7 @@ def generate_m3u():
     log("\n====================================")
     log("LISTA M3U GENERADA CORRECTAMENTE")
     log(f"Canales unicos: {len(channels)} (con id: {with_id})")
+    log(f"Excluidos por nombre (new era...): {len(set(EXCLUDED_NAMES))}")
     for group, count in counts.items():
         log(f"  {group}: {count}")
     log(f"Archivo: {OUTPUT_FILE}")
