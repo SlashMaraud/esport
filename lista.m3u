@@ -23,8 +23,6 @@ http://127.0.0.1:6878/ace/getstream?id=12ea555d431dbe51fc8e4ca745aec09fe22a4865
 http://127.0.0.1:6878/ace/getstream?id=30ff9d7fd1d33fbfb18b64e6910888c50491965e
 #EXTINF:-1 group-title="DAZN",DAZN Baloncesto 3 1080 elcano.top zeronet http://127.0.0.1:43110/18D6dPcsjLrjg2hhnYqKzNh2W6QtXrDwF/ https://ipfs.io/ipns/elcano.top
 http://127.0.0.1:6878/ace/getstream?id=8b12412b5f48abb3e56a1d27731ba0015627ec7a
-#EXTINF:-1 group-title="DAZN",DAZN Baloncesto 1080 elcano.top zeronet http://127.0.0.1:43110/18D6dPcsjLrjg2hhnYqKzNh2W6QtXrDwF/ https://ipfs.io/ipns/elcano.top
-http://127.0.0.1:6878/ace/getstream?id=256acf88029a4f2e6d75f6be489d7a28a05bf069
 #EXTINF:-1 group-title="DAZN",DAZN F1 HD
 http://127.0.0.1:6878/ace/getstream?id=d65257bb934b73647374224fd62d836815804be2
 #EXTINF:-1 group-title="DAZN",DAZN F1 Shickat | shickat.online (VPN) | shickat.blog | https://ipfs.io/ipns/k51qzi5uqu5dgni30z98zbli9a3vv2xtp8cek1xjikfsels3a259i5clyta19p
@@ -145,6 +143,8 @@ http://127.0.0.1:6878/ace/getstream?id=41f476ec85da28deeb6492a9804c1d493a884627
 http://127.0.0.1:6878/ace/getstream?id=60a59a6259b6d4cb5b826e1847cd0af0a7ecc1ce
 #EXTINF:-1 group-title="MOVISTAR",Movistar Plus Shickat | shickat.online (VPN) | shickat.blog | https://ipfs.io/ipns/k51qzi5uqu5dgni30z98zbli9a3vv2xtp8cek1xjikfsels3a259i5clyta19p
 http://127.0.0.1:6878/ace/getstream?id=67121cbb722b88ce4489717e9a87a26f60184ec9
+#EXTINF:-1 group-title="MOVISTAR",Movistar+
+http://127.0.0.1:6878/ace/getstream?id=fa931cbc87dc9d66fdd30a9644e054b403960056
 
 #EXTGRP: group-title="NBA"
 #EXTINF:-1 group-title="NBA",NBA TV [US]
